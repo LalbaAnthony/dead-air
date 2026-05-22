@@ -140,15 +140,19 @@ function generateSilenceClip(duration, output, info) {
   const args = [
     '-f', 'lavfi',
     '-i', `color=c=black:size=${info.width}x${info.height}:rate=${info.fps}`,
-    '-c:v', 'libx264', '-crf', '18', '-preset', 'fast',
   ];
 
   if (info.hasAudio) {
     args.push(
       '-f', 'lavfi',
       '-i', `anullsrc=channel_layout=${channelLayout}:sample_rate=${info.sampleRate}`,
-      '-c:a', 'aac', '-ar', String(info.sampleRate), '-ac', String(info.channels),
     );
+  }
+
+  args.push('-c:v', 'libx264', '-crf', '18', '-preset', 'fast');
+
+  if (info.hasAudio) {
+    args.push('-c:a', 'aac', '-ar', String(info.sampleRate), '-ac', String(info.channels));
   } else {
     args.push('-an');
   }
