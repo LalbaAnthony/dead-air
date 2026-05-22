@@ -89,12 +89,13 @@ const segments = buildSegments(silences, info.duration);
 const tmpDir = mkdtempSync(join(tmpdir(), 'derush-'));
 
 try {
-  const fileList = [];
+  const fileList: string[] = [];
   const clipSegs = segments.filter(s => s.type === 'clip');
   let clipIdx = 0;
 
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
+    if (!seg) continue;
 
     if (seg.type === 'silence') {
       if (replacement > 0) {
@@ -134,7 +135,8 @@ try {
   console.log(`--------------------------------------`);
 
 } catch (err) {
-  console.error('\nError:', err.message);
+  const message = err instanceof Error ? err.message : String(err);
+  console.error('\nError:', message);
   process.exit(1);
 } finally {
   rmSync(tmpDir, { recursive: true, force: true });

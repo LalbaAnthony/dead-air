@@ -1,16 +1,17 @@
-import { spawnSync } from 'node:child_process';
+import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import { writeFileSync, unlinkSync } from 'node:fs';
 
 import { ffmpegBin, ffprobeBin, NOISE_DB } from './config.js';
+import type { VideoInfo, Silence, FfprobeOutput } from './types.js';
 
-function ff(bin, args) {
+function ff(bin: string, args: string[]): SpawnSyncReturns<string> {
   return spawnSync(bin, args, {
     encoding: 'utf8',
     maxBuffer: 200 * 1024 * 1024,
   });
 }
 
-export function getVideoInfo(file) {
+export function getVideoInfo(file: string): VideoInfo {
   const r = ff(ffprobeBin, [
     '-v', 'quiet',
     '-print_format', 'json',
@@ -21,50 +22,52 @@ export function getVideoInfo(file) {
 
   if (r.status !== 0) throw new Error(`ffprobe failed:\n${r.stderr}`);
 
-  const d = JSON.parse(r.stdout);
+  const d = JSON.parse(r.stdout) as FfprobeOutput;
   const vs = d.streams.find(s => s.codec_type === 'video');
   const as = d.streams.find(s => s.codec_type === 'audio');
 
   if (!vs) throw new Error('No video stream found.');
 
-  const [num, den] = vs.r_frame_rate.split('/');
+  const parts = (vs.r_frame_rate ?? '30/1').split('/');
+  const num = parts[0] ?? '30';
+  const den = parts[1] ?? '1';
 
   return {
-    width: vs.width,
-    height: vs.height,
+    width: vs.width ?? 0,
+    height: vs.height ?? 0,
     fps: parseFloat(num) / parseFloat(den),
     duration: parseFloat(d.format.duration),
-    sampleRate: as ? parseInt(as.sample_rate, 10) : 44100,
-    channels: as ? as.channels : 2,
+    sampleRate: as?.sample_rate ? parseInt(as.sample_rate, 10) : 44100,
+    channels: as?.channels ?? 2,
     hasAudio: !!as,
   };
 }
 
-export function detectSilences(file, threshold) {
+export function detectSilences(file: string, threshold: number): Silence[] {
   const r = ff(ffmpegBin, [
     '-i', file,
     '-af', `silencedetect=noise=${NOISE_DB}dB:d=${threshold}`,
     '-f', 'null', '-',
   ]);
 
-  // ffmpeg writes silencedetect output to stderr
   const text = r.stderr;
-  const silences = [];
+  const silences: Silence[] = [];
 
   for (const m of text.matchAll(/silence_start: ([\d.e+\-]+)/g)) {
-    silences.push({ start: parseFloat(m[1]), end: null });
+    silences.push({ start: parseFloat(m[1] ?? '0'), end: null });
   }
 
   let i = 0;
   for (const m of text.matchAll(/silence_end: ([\d.e+\-]+)/g)) {
-    if (silences[i]) silences[i].end = parseFloat(m[1]);
+    const silence = silences[i];
+    if (silence) silence.end = parseFloat(m[1] ?? '0');
     i++;
   }
 
   return silences;
 }
 
-export function extractClip(input, start, end, output, info) {
+export function extractClip(input: string, start: number, end: number, output: string, info: VideoInfo): void {
   const args = [
     '-ss', String(start),
     '-i', input,
@@ -85,7 +88,7 @@ export function extractClip(input, start, end, output, info) {
   if (r.status !== 0) throw new Error(`extractClip failed [${start}→${end}]:\n${r.stderr}`);
 }
 
-export function generateFreezeClip(input, freezeAt, duration, output, info) {
+export function generateFreezeClip(input: string, freezeAt: number, duration: number, output: string, info: VideoInfo): void {
   const channelLayout = info.channels === 1 ? 'mono' : 'stereo';
   const framePng = output + '.png';
 
@@ -97,7 +100,7 @@ export function generateFreezeClip(input, freezeAt, duration, output, info) {
   ]);
   if (r1.status !== 0) throw new Error(`freeze frame extract failed:\n${r1.stderr}`);
 
-  const args = [
+  const args: string[] = [
     '-loop', '1',
     '-framerate', String(info.fps),
     '-i', framePng,
@@ -121,12 +124,12 @@ export function generateFreezeClip(input, freezeAt, duration, output, info) {
   args.push('-t', String(duration), '-y', output);
 
   const r2 = ff(ffmpegBin, args);
-  try { unlinkSync(framePng); } catch {}
+  try { unlinkSync(framePng); } catch { /* ignore cleanup errors */ }
 
   if (r2.status !== 0) throw new Error(`generateFreezeClip failed:\n${r2.stderr}`);
 }
 
-export function concatFiles(fileList, concatTxt, output) {
+export function concatFiles(fileList: string[], concatTxt: string, output: string): void {
   const lines = fileList.map(f => `file '${f.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`);
   writeFileSync(concatTxt, lines.join('\n'), 'utf8');
 

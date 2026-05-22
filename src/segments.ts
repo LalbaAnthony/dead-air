@@ -1,14 +1,13 @@
-/**
- * Build ordered list of segments from detected silences.
- * Each silence >= threshold is replaced by a synthetic silence block.
- * Gaps between silences are "clip" segments kept from the source.
- */
-export function buildSegments(silences, totalDuration) {
-  const segs = [];
+import type { Silence, Segment } from './types.js';
+
+export function buildSegments(silences: Silence[], totalDuration: number): Segment[] {
+  const segs: Segment[] = [];
   let pos = 0;
 
   for (let i = 0; i < silences.length; i++) {
     const s = silences[i];
+    if (!s) continue;
+
     if (s.start > pos + 0.02) {
       segs.push({ type: 'clip', start: pos, end: s.start });
     }
