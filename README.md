@@ -1,4 +1,4 @@
-# derush
+# DeadAir - Silence Cutter for Video Files
 
 Cut long silences from video files. Designed for quick de-rushing before editing.
 
