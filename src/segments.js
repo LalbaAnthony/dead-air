@@ -7,11 +7,12 @@ export function buildSegments(silences, totalDuration) {
   const segs = [];
   let pos = 0;
 
-  for (const s of silences) {
+  for (let i = 0; i < silences.length; i++) {
+    const s = silences[i];
     if (s.start > pos + 0.02) {
       segs.push({ type: 'clip', start: pos, end: s.start });
     }
-    segs.push({ type: 'silence' });
+    segs.push({ type: 'silence', index: i, start: s.start });
     pos = s.end !== null ? s.end : totalDuration;
   }
 

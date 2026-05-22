@@ -5,7 +5,7 @@ import { resolve, extname, basename, dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import { NOISE_DB } from './config.js';
-import { getVideoInfo, detectSilences, extractClip, generateSilenceClip, concatFiles } from './ffmpeg.js';
+import { getVideoInfo, detectSilences, extractClip, generateFreezeClip, concatFiles } from './ffmpeg.js';
 import { buildSegments } from './segments.js';
 import { fmtTime, fmtMB } from './format.js';
 
@@ -90,17 +90,6 @@ const tmpDir = mkdtempSync(join(tmpdir(), 'derush-'));
 
 try {
   const fileList = [];
-  let silenceFile = null;
-
-  const hasSilenceSegs = segments.some(s => s.type === 'silence');
-
-  if (hasSilenceSegs) {
-    silenceFile = join(tmpDir, 'silence.mp4');
-    process.stdout.write(`Generating ${replacement}s silence clip... `);
-    generateSilenceClip(replacement, silenceFile, info);
-    console.log('done');
-  }
-
   const clipSegs = segments.filter(s => s.type === 'clip');
   let clipIdx = 0;
 
@@ -108,7 +97,11 @@ try {
     const seg = segments[i];
 
     if (seg.type === 'silence') {
-      fileList.push(silenceFile);
+      if (replacement > 0) {
+        const freezeFile = join(tmpDir, `freeze_${seg.index}.mp4`);
+        generateFreezeClip(inputAbs, seg.start, replacement, freezeFile, info);
+        fileList.push(freezeFile);
+      }
       continue;
     }
 

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, unlinkSync } from 'node:fs';
 
 import { ffmpegBin, ffprobeBin, NOISE_DB } from './config.js';
 
@@ -85,11 +85,22 @@ export function extractClip(input, start, end, output, info) {
   if (r.status !== 0) throw new Error(`extractClip failed [${start}→${end}]:\n${r.stderr}`);
 }
 
-export function generateSilenceClip(duration, output, info) {
+export function generateFreezeClip(input, freezeAt, duration, output, info) {
   const channelLayout = info.channels === 1 ? 'mono' : 'stereo';
+  const framePng = output + '.png';
+
+  const r1 = ff(ffmpegBin, [
+    '-ss', String(freezeAt),
+    '-i', input,
+    '-vframes', '1',
+    '-y', framePng,
+  ]);
+  if (r1.status !== 0) throw new Error(`freeze frame extract failed:\n${r1.stderr}`);
+
   const args = [
-    '-f', 'lavfi',
-    '-i', `color=c=black:size=${info.width}x${info.height}:rate=${info.fps}`,
+    '-loop', '1',
+    '-framerate', String(info.fps),
+    '-i', framePng,
   ];
 
   if (info.hasAudio) {
@@ -109,8 +120,10 @@ export function generateSilenceClip(duration, output, info) {
 
   args.push('-t', String(duration), '-y', output);
 
-  const r = ff(ffmpegBin, args);
-  if (r.status !== 0) throw new Error(`generateSilenceClip failed:\n${r.stderr}`);
+  const r2 = ff(ffmpegBin, args);
+  try { unlinkSync(framePng); } catch {}
+
+  if (r2.status !== 0) throw new Error(`generateFreezeClip failed:\n${r2.stderr}`);
 }
 
 export function concatFiles(fileList, concatTxt, output) {
