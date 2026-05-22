@@ -1,25 +1,20 @@
-#!/usr/bin/env node
-
 import { existsSync, mkdtempSync, statSync, rmSync } from 'node:fs';
 import { resolve, extname, basename, dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
-
 import { NOISE_DB } from './config.js';
 import { getVideoInfo, detectSilences, extractClip, generateFreezeClip, concatFiles } from './ffmpeg.js';
 import { buildSegments } from './segments.js';
-import { fmtTime, fmtMB } from './format.js';
+import { formatTime, formatSize } from './helpers/format.js';
 
 const [, , inputFile, thresholdArg, replacementArg] = process.argv;
 
 if (!inputFile || !thresholdArg || !replacementArg) {
   console.error([
-    'Usage: node index.js <input.mp4> <threshold_sec> <replacement_sec>',
+    'Usage: npm start <input.mp4> <threshold_sec> <replacement_sec>',
     '',
     '  threshold_sec   : minimum silence duration to detect (e.g. 1.5)',
     '  replacement_sec : duration to replace long silences with (e.g. 1)',
     '',
-    'Example:',
-    '  node index.js recording.mp4 2 1',
   ].join('\n'));
   process.exit(1);
 }
@@ -61,7 +56,7 @@ console.log(`  Noise level : ${NOISE_DB} dB\n`);
 // -- Analyze
 process.stdout.write('Analyzing video... ');
 const info = getVideoInfo(inputAbs);
-console.log(`${info.width}x${info.height} @ ${info.fps.toFixed(2)} fps | ${fmtTime(info.duration)} | audio: ${info.hasAudio ? `${info.sampleRate}Hz ${info.channels}ch` : 'none'}`);
+console.log(`${info.width}x${info.height} @ ${info.fps.toFixed(2)} fps | ${formatTime(info.duration)} | audio: ${info.hasAudio ? `${info.sampleRate}Hz ${info.channels}ch` : 'none'}`);
 
 // -- Detect silences
 process.stdout.write('Detecting silences... ');
@@ -78,7 +73,7 @@ silences.forEach((s, i) => {
   const end = s.end !== null ? s.end : info.duration;
   const dur = end - s.start;
   totalSilenceDuration += dur;
-  console.log(`  [${String(i + 1).padStart(2)}] ${fmtTime(s.start)} → ${fmtTime(end)}  (${dur.toFixed(2)}s)`);
+  console.log(`  [${String(i + 1).padStart(2)}] ${formatTime(s.start)} → ${formatTime(end)}  (${dur.toFixed(2)}s)`);
 });
 console.log(`\n  Total silence: ${totalSilenceDuration.toFixed(2)}s`);
 console.log(`  Saved approx : ${(totalSilenceDuration - silences.length * replacement).toFixed(2)}s\n`);
@@ -110,7 +105,7 @@ try {
     const pct = Math.round((clipIdx / clipSegs.length) * 100);
     const segFile = join(tmpDir, `clip_${clipIdx}.mp4`);
 
-    process.stdout.write(`\r[${String(pct).padStart(3)}%] Extracting clip ${clipIdx}/${clipSegs.length}  (${fmtTime(seg.start)} → ${fmtTime(seg.end)})   `);
+    process.stdout.write(`\r[${String(pct).padStart(3)}%] Extracting clip ${clipIdx}/${clipSegs.length}  (${formatTime(seg.start)} → ${formatTime(seg.end)})   `);
 
     extractClip(inputAbs, seg.start, seg.end, segFile, info);
     fileList.push(segFile);
@@ -131,7 +126,7 @@ try {
 
   console.log(`\n--------------------------------------`);
   console.log(`Output : ${outputFile}`);
-  console.log(`Size   : ${fmtMB(inSize)} → ${fmtMB(outSize)} (${saved}% reduction)`);
+  console.log(`Size   : ${formatSize(inSize)} → ${formatSize(outSize)} (${saved}% reduction)`);
   console.log(`--------------------------------------`);
 
 } catch (err) {

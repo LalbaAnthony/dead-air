@@ -1,13 +1,12 @@
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import { writeFileSync, unlinkSync } from 'node:fs';
-
 import { ffmpegBin, ffprobeBin, NOISE_DB } from './config.js';
 import type { VideoInfo, Silence, FfprobeOutput } from './types.js';
 
 function ff(bin: string, args: string[]): SpawnSyncReturns<string> {
   return spawnSync(bin, args, {
     encoding: 'utf8',
-    maxBuffer: 200 * 1024 * 1024,
+    maxBuffer: 200 * 1024 * 1024, // 200 MB
   });
 }
 
