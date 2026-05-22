@@ -1,0 +1,16 @@
+{
+  "name": "derush",
+  "version": "1.0.0",
+  "description": "Cut long silences from video files for de-rushing",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "ffprobe-static": "^3.1.0"
+  }
+}
