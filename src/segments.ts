@@ -1,4 +1,4 @@
-import type { Silence, Segment } from './types.js';
+import type { Silence, Segment } from './types/index.js';
 
 export function buildSegments(silences: Silence[], totalDuration: number): Segment[] {
   const segs: Segment[] = [];
