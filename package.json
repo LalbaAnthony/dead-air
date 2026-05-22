@@ -1,13 +1,14 @@
 {
-  "name": "derush",
+  "name": "dead-air",
   "version": "1.0.0",
   "description": "Cut long silences from video files for de-rushing",
+  "type": "module",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=24"
   },
   "dependencies": {
     "ffmpeg-static": "^5.2.0",

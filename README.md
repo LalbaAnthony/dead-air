@@ -39,10 +39,10 @@ node src/index.js takes.mp4 1 0
 
 ## Tuning
 
-| Setting     | Location      | Default              | Notes                                      |
-| ----------- | ------------- | -------------------- | ------------------------------------------ |
-| `NOISE_DB`  | `src/index.js:16` | `-35`                | Silence threshold in dB. Lower = stricter. |
-| Video codec | `src/index.js`    | `libx264 crf18 fast` | Change preset for speed vs quality         |
+| Setting     | Location        | Default              | Notes                                      |
+| ----------- | --------------- | -------------------- | ------------------------------------------ |
+| `NOISE_DB`  | `src/config.js` | `-35`                | Silence threshold in dB. Lower = stricter. |
+| Video codec | `src/ffmpeg.js` | `libx264 crf18 fast` | Change preset for speed vs quality         |
 
 ## How it works
 
